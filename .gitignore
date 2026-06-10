@@ -1,19 +1,37 @@
-.search-cache
-.DS_Store
-.env
-/node_modules/
-npm-debug.log
-coverage/
-.linkinator
-/assets/images/early-access
-/content/early-access
-/data/early-access
-.next
-.eslintcache
-*.tsbuildinfo
+# Dependencies
+node_modules/
 
-# blc: broken link checker
-blc_output.log
-blc_output_internal.log
-broken_links.md
-lib/redirects/.redirects-cache_*.json
+# Build outputs
+dist/
+build/
+coverage/
+.vite/
+.scratch/
+playwright-report/
+test-results/
+webapp/e2e/.artifacts/
+mobile/.expo/
+mobile/.maestro/reports/
+
+# Runtime and logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Prisma generated client
+backend/src/generated/prisma/
+backend/.prisma-generate.lock
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
