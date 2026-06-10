@@ -53,10 +53,20 @@ const envSchema = z.object({
   SPACES_UPLOAD_URL_TTL_SECONDS: z.coerce.number().int().positive().max(7 * 24 * 60 * 60).default(15 * 60),
   SPACES_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().positive().max(7 * 24 * 60 * 60).default(5 * 60),
   SPACES_PUBLIC_CACHE_CONTROL: stringWithDefault('public, max-age=31536000, immutable'),
+  // AI caller (see docs/AI_CALLER.md). All optional until the calling pipeline
+  // is wired; provider keys are server-side secrets and never reach the client.
+  OPENAI_API_KEY: optionalStringSchema,
+  ELEVENLABS_API_KEY: optionalStringSchema,
+  ELEVENLABS_VOICE_ID: optionalStringSchema,
+  TWILIO_ACCOUNT_SID: optionalStringSchema,
+  TWILIO_AUTH_TOKEN: optionalStringSchema,
+  TWILIO_FROM_NUMBER: optionalStringSchema,
+  AI_CALLER_PUBLIC_BASE_URL: optionalUrlSchema,
 }).superRefine((env, ctx) => {
   validateJwtSecret(env, ctx)
   validateCorsOrigins(env, ctx)
   validateStorageEnv(env, ctx)
+  validateTelephonyEnv(env, ctx)
 })
 
 export type AppEnv = z.infer<typeof envSchema>
@@ -167,6 +177,23 @@ function validateStorageEnv(env: z.infer<typeof envSchema>, ctx: z.RefinementCtx
         code: 'custom',
         path: [key],
         message: `${key} is required when DigitalOcean Spaces storage is configured`,
+      })
+    }
+  }
+}
+
+function validateTelephonyEnv(env: z.infer<typeof envSchema>, ctx: z.RefinementCtx) {
+  const requiredTwilioKeys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'] as const
+  const telephonyConfigured = requiredTwilioKeys.some((key) => env[key] !== undefined)
+
+  if (!telephonyConfigured) return
+
+  for (const key of requiredTwilioKeys) {
+    if (env[key] === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [key],
+        message: `${key} is required when Twilio telephony is configured`,
       })
     }
   }

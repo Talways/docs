@@ -1,6 +1,8 @@
 import {
   addLeadsRequestSchema,
   apiErrorSchema,
+  callResponseSchema,
+  callsResponseSchema,
   createLeadListRequestSchema,
   leadListResponseSchema,
   leadListsResponseSchema,
@@ -14,12 +16,14 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import type { AppEnv } from '../env'
 import { validationErrorHook } from '../http/errors'
 import { requireAuth, type AuthenticatedVariables } from '../auth/middleware'
+import type { CallsService } from '../calls/service'
 import { LeadsService } from './service'
 
 type LeadRouteEnv = {
   Variables: AuthenticatedVariables & {
     env: AppEnv
     leadsService: LeadsService
+    callsService: CallsService
   }
 }
 
@@ -115,6 +119,36 @@ const listLeadsRoute = createRoute({
   },
 })
 
+const queueCallRoute = createRoute({
+  method: 'post',
+  path: '/leads/{leadId}/queue-call',
+  request: { params: leadIdParamSchema },
+  responses: {
+    201: {
+      content: { 'application/json': { schema: callResponseSchema } },
+      description: 'Queued an outbound AI call for the lead',
+    },
+    400: { content: errorResponseContent, description: 'Lead has no phone number' },
+    401: { content: errorResponseContent, description: 'Missing or invalid access token' },
+    404: { content: errorResponseContent, description: 'Lead not found' },
+    409: { content: errorResponseContent, description: 'Lead is marked DO_NOT_CALL' },
+  },
+})
+
+const listCallsRoute = createRoute({
+  method: 'get',
+  path: '/leads/{leadId}/calls',
+  request: { params: leadIdParamSchema },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: callsResponseSchema } },
+      description: 'Call attempts for a lead, newest first',
+    },
+    401: { content: errorResponseContent, description: 'Missing or invalid access token' },
+    404: { content: errorResponseContent, description: 'Lead not found' },
+  },
+})
+
 const updateLeadStatusRoute = createRoute({
   method: 'post',
   path: '/leads/{leadId}/status',
@@ -174,6 +208,18 @@ export function createLeadRoutes() {
     const { status } = c.req.valid('json')
     const lead = await c.get('leadsService').updateLeadStatus(c.get('userId'), leadId, status)
     return c.json({ lead }, 200)
+  })
+
+  routes.openapi(queueCallRoute, async (c) => {
+    const { leadId } = c.req.valid('param')
+    const call = await c.get('callsService').queueCall(c.get('userId'), leadId)
+    return c.json({ call }, 201)
+  })
+
+  routes.openapi(listCallsRoute, async (c) => {
+    const { leadId } = c.req.valid('param')
+    const calls = await c.get('callsService').listCallsForLead(c.get('userId'), leadId)
+    return c.json({ calls }, 200)
   })
 
   return routes

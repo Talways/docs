@@ -8,6 +8,7 @@ import { createAuthRoutes } from './auth/routes'
 import { AuthService } from './auth/service'
 import { createLeadRoutes } from './leads/routes'
 import { LeadsService } from './leads/service'
+import { CallsService } from './calls/service'
 import { errorResponse, handleError, validationErrorHook } from './http/errors'
 import { createStorageServiceFromEnv, type StorageService } from './storage/service'
 
@@ -15,6 +16,7 @@ type AppBindings = {
   Variables: {
     authService: AuthService
     leadsService: LeadsService
+    callsService: CallsService
     env: AppEnv
     storageService: StorageService | null
   }
@@ -28,6 +30,7 @@ type CreateAppOptions = {
 export function createApp({ env, prisma }: CreateAppOptions) {
   const authService = new AuthService(prisma, env)
   const leadsService = new LeadsService(prisma)
+  const callsService = new CallsService(prisma)
   const storageService = createStorageServiceFromEnv(env)
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: validationErrorHook,
@@ -50,6 +53,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.use('*', async (c, next) => {
     c.set('authService', authService)
     c.set('leadsService', leadsService)
+    c.set('callsService', callsService)
     c.set('env', env)
     c.set('storageService', storageService)
     await next()

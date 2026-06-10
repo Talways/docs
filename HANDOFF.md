@@ -65,14 +65,16 @@ in an environment that has Docker + Postgres 18.
 
 ## Next implementation step (the AI caller)
 
-Follow `docs/AI_CALLER.md`. In short:
-1. Add optional env slots (`OPENAI_API_KEY`, `ELEVENLABS_API_KEY`,
-   `ELEVENLABS_VOICE_ID`, `TELEPHONY_*`, `AI_CALLER_PUBLIC_BASE_URL`) to
-   `backend/.env.example` + `backend/src/env.ts` (validated as an optional group
-   like the `SPACES_*` block).
-2. `POST /api/leads/leads/{leadId}/queue-call` → creates a `Call` (snapshots the
-   phone), asks Twilio to dial.
-3. Media-stream loop in `backend/src/worker.ts`: prospect audio → STT → GPT-4o
+Follow `docs/AI_CALLER.md`. Progress so far:
+1. DONE — optional env slots (`OPENAI_API_KEY`, `ELEVENLABS_API_KEY`,
+   `ELEVENLABS_VOICE_ID`, `TWILIO_ACCOUNT_SID/AUTH_TOKEN/FROM_NUMBER`,
+   `AI_CALLER_PUBLIC_BASE_URL`) are in `backend/.env.example` + `backend/src/env.ts`
+   (Twilio keys validated as a group like `SPACES_*`).
+2. DONE (skeleton) — `POST /api/leads/leads/{leadId}/queue-call` + `CallsService`
+   (`backend/src/calls/service.ts`) create a `Call` (snapshots the phone, sets the
+   lead to `QUEUED`), with 404/400/409 guards. `GET /api/leads/leads/{leadId}/calls`
+   lists attempts. The actual Twilio dial is still a TODO in `queueCall`.
+3. NEXT — media-stream loop in `backend/src/worker.ts`: prospect audio → STT → GPT-4o
    (streaming, with outcome/callback/handoff tool calls) → ElevenLabs → caller
    audio, with barge-in.
 4. Persist transcript/summary/recording/outcome; reconcile `Lead.status`.

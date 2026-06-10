@@ -65,6 +65,8 @@ signed-in user.
 | `POST /api/leads/lists/{listId}/leads` | Add 1–500 businesses to a list (manual entry or a bulk enrichment batch). |
 | `GET /api/leads/lists/{listId}/leads?status=` | List businesses in a list, optionally filtered by status. |
 | `POST /api/leads/leads/{leadId}/status` | Update a business's call/pipeline status. |
+| `POST /api/leads/leads/{leadId}/queue-call` | Queue an outbound AI call for a business (creates a `Call`; blocks if no phone or `DO_NOT_CALL`). |
+| `GET /api/leads/leads/{leadId}/calls` | List a business's call attempts, newest first. |
 
 Lead pipeline statuses: `NEW`, `QUEUED`, `CALLING`, `CALLED`, `INTERESTED`,
 `NOT_INTERESTED`, `CALLBACK`, `INVALID`, `DO_NOT_CALL`.

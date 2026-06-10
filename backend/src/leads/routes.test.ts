@@ -39,5 +39,17 @@ describe('lead routes', () => {
 
     expect(createResponse.status).toBe(401)
     expect(createBody.error.code).toBe('UNAUTHORIZED')
+
+    const queueCallResponse = await app.request(
+      `/api/leads/leads/${'0'.repeat(8)}-0000-7000-8000-000000000000/queue-call`,
+      {
+        method: 'POST',
+        headers: { 'X-Client-Platform': 'web' },
+      },
+    )
+    const queueCallBody = await queueCallResponse.json()
+
+    expect(queueCallResponse.status).toBe(401)
+    expect(queueCallBody.error.code).toBe('UNAUTHORIZED')
   })
 })
