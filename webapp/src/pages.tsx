@@ -29,12 +29,17 @@ export function RootLayout() {
       <header className="border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-wrap items-center gap-3 px-5 py-3">
           <Typography asChild variant="h6">
-            <Link to="/">web_app_demo</Link>
+            <Link to="/">ColdPilot</Link>
           </Typography>
           <nav className="ml-auto flex items-center gap-2" aria-label="Primary">
             <Typography asChild variant="control" tone="muted">
               <Link to="/" className={navLinkClass}>
                 Auth
+              </Link>
+            </Typography>
+            <Typography asChild variant="control" tone="muted">
+              <Link to="/leads" className={navLinkClass}>
+                Leads
               </Link>
             </Typography>
             <Typography asChild variant="control" tone="muted">

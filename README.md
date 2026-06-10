@@ -1,71 +1,73 @@
-# Vibe Coding Template
+# ColdPilot
 
-<p align="center">
-  <img src="docs/assets/vibe_tmpl_schema.png" alt="Vibe Coding Template architecture schema" width="100%">
-</p>
+ColdPilot builds targeted databases of businesses on demand — starting with
+B2B SaaS companies — enriched with phone numbers, and then cold-calls them with
+an AI voice agent that pitches a subscription. It is a full-stack monorepo built
+on the [vibe](https://github.com/di-sukharev/vibe) template: a Bun/Hono backend,
+a React CSR app (`webapp`), an Astro public site (`website`), and shared Zod API
+contracts.
 
-A full-stack starter for web and backend products: one repository with a Bun/Hono backend, a React CSR browser client (`webapp`), an Astro SSG/SSR site (`website`), and shared API contracts. The runnable Expo mobile template lives on the `mobile` branch so the default branch stays focused on webapp, backend, website, infrastructure, and shared contracts.
+## What ColdPilot Does
 
-## Agent Intake Checklist Before Installing
+1. **Build target lists.** A user describes who they want to reach (e.g. "B2B
+   SaaS companies in the US, 11-50 employees"). That becomes a `LeadList`.
+2. **Collect businesses with phone numbers.** Businesses are added to a list as
+   `Lead` records (manually, by bulk import, or by an enrichment pipeline) with
+   company, website, phone, email, and location.
+3. **Cold-call with an AI agent.** Each lead can be queued for an outbound call.
+   The AI caller (GPT-4o for the conversation, ElevenLabs for voice, plus a
+   telephony provider) speaks to the business and pitches the subscription.
+   Every attempt is recorded as a `Call` with status, outcome, transcript, and
+   summary. See [docs/AI_CALLER.md](docs/AI_CALLER.md).
 
-Before cloning or installing this template for an end user, the agent should ask a short product-focused intake in the user's language and record the answers during setup:
+The business model is recursive: we use ColdPilot to cold-call B2B SaaS
+companies and sell them a monthly subscription to the same AI caller, which they
+then point at their own prospect lists.
 
-- Confirm whether this is a new project from the template or work on the template itself.
-- Ask for the project name/slug and the user's own GitHub destination, if they already have one.
-- Ask what product they want to build first and the first user journey that should work.
-- Ask which surfaces are active now: `webapp`, `mobile`, `backend/API`, `website`, or full-stack. Mark the rest as deferred.
-- Route each browser feature by SEO need, not by habit: public, search-indexable, or link-previewed pages (landing, content, marketplace catalog) belong in `website` (Astro SSG first; SSR/hybrid only for request-specific routes); behind-login app screens with no SEO belong in `webapp` (CSR). See "Choosing `webapp` vs `website`". The user usually will not know this distinction, so decide it for them and explain it in product terms.
-- If `mobile` is active, clone or checkout the `mobile` branch before setup; that branch is the mobile-ready template line with payments, Expo Push, and mobile-specific release/setup foundation.
-- Ask whether the first version needs accounts/auth, persistence, file uploads, images/media, payments, admin tools, or external integrations.
-- Ask whether the product needs real-time collaboration, chat, presence, live notifications, or other WebSocket-style updates.
-- If `mobile` is active, switch to the `mobile` branch before setup and ask whether Expo/EAS builds and Maestro E2E validation are needed now or can be left unconfigured until later.
-- For files/images/media, ask whether assets are public or private, what users upload, expected max file size, allowed file types, whether thumbnails/optimized variants are needed, and when files should be deleted.
-- Ask whether deployment is needed now. If yes, use DigitalOcean by default and ask for production domains/URLs and release targets, not for a cloud provider choice.
-- For DigitalOcean deployment, verify App Platform GitHub integration first, then generate specs with `bun run deploy:do:specs`; never hand-substitute secrets or URLs into app specs.
-- If the user explicitly asks for Yandex Cloud, follow [docs/YANDEX_CLOUD.md](docs/YANDEX_CLOUD.md) instead of improvising provider choices.
-- If backend/API, full-stack, uploads, or database-backed validation is active, verify Docker Compose and the Docker daemon before local setup.
+## Project Setup Decisions
 
-## Agent Repo Download Instructions
+Recorded during installation from the template:
 
-When installing this repository from a GitHub URL into a fresh Codex or agent session, treat setup as an onboarding task before feature work. This README is the source of truth for first-run setup because fresh installers may not read `AGENTS.md`.
+- **Project name / slug:** `coldpilot`. The workspace packages are scoped
+  `@coldpilot/*`. The internal database name and refresh-cookie still use the
+  template's `web_app_demo` identifier; renaming those infra tokens is a separate,
+  optional pass and is intentionally deferred to keep the test/deploy harness
+  stable.
+- **Active surfaces now:** `backend/API` and `webapp`. The `website` (Astro) and
+  `mobile` (Expo, on the `mobile` branch) surfaces are intact but deferred until
+  there is public-SEO or mobile product work.
+- **Accounts/auth & persistence:** active. The lead/call domain is owned, and the
+  baseline email + password auth from the template gates every `/api/leads`
+  route.
+- **First user journey:** sign in → create a target list → add businesses with
+  phone numbers → track each business's call status. The `/leads` page in the
+  webapp drives this.
+- **Real-time, uploads/media, payments:** deferred. No WebSocket, storage, or
+  billing work is configured yet.
+- **AI caller (GPT-4o + ElevenLabs + telephony):** modeled in the schema (`Call`)
+  and specified in [docs/AI_CALLER.md](docs/AI_CALLER.md); the live telephony
+  integration is a documented next step, not yet wired, because it needs
+  provider accounts and webhooks.
+- **Deployment:** local-only for now. DigitalOcean App Platform stays the
+  supported production path (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)); no
+  production remote is configured.
 
-Give the agent this initial prompt:
+## Lead & Call API
 
-```text
-Install this repository into the project. Before cloning from a GitHub URL, ask whether I plan to develop a mobile app now. If yes, clone the `mobile` branch with `git clone --branch mobile --single-branch <repo-url>` or checkout `mobile` immediately after cloning; that branch is the mobile-ready template line with Expo, payments, Expo Push, social auth, and mobile-specific release/setup foundation. If mobile is deferred, use the default branch; it intentionally contains only `mobile/README.md` as a pointer to the mobile template branch. First read README.md, CLAUDE.md if present, and relevant docs/*.md, including docs/LOCAL_DATABASE.md when backend/API or full-stack work is active, docs/STORAGE.md when uploads, files, images, or media are active, and docs/YANDEX_CLOUD.md only when I explicitly ask for Yandex Cloud. Before setup, ask me what project name/slug I want to use, what product I want to build first, which surfaces I need now (webapp, mobile, backend/API, website, or full-stack), whether the first version needs auth/persistence/uploads/media/integrations, whether it needs real-time chat/presence/live updates, and whether I need deployment now. If mobile is active, confirm the checkout is on the `mobile` branch before running mobile setup, then follow that branch's README for Expo/EAS, Maestro, IAP, push, and social auth setup. Prefer the monolithic backend in this repository; do not introduce microservices during setup. If real-time features later need horizontal scaling across multiple backend instances, use managed Redis-compatible Pub/Sub such as DigitalOcean Managed Valkey or Yandex Managed Service for Valkey to fan out events between WebSocket connections. If deployment is needed, use DigitalOcean App Platform, DigitalOcean Managed PostgreSQL, and DigitalOcean Spaces by default; ask me for production domains/URLs and release targets, but do not ask me to choose a cloud provider unless I explicitly request another provider. For DigitalOcean deployment, first verify that App Platform is connected to my GitHub account/organization and has access to the full monorepo branch, then generate concrete specs with `bun run deploy:do:specs` into `.scratch/deploy`; do not use manual `sed`, `perl`, or shell substitution for secrets, CORS origins, `VITE_API_URL`, or `PUBLIC_WEBAPP_URL`. If I explicitly request Yandex Cloud, use Yandex Serverless Containers, Yandex Managed Service for PostgreSQL, Yandex Object Storage, and Yandex Cloud CDN according to docs/YANDEX_CLOUD.md. If backend/API, full-stack, uploads, or any database-backed validation is active, verify Docker Compose with `docker compose version` and the Docker daemon with `docker info`; if Docker is missing or not running, explain how to install/start it for my OS before continuing. Treat this checkout as a new project by default, not as a pull request back to the template: detach the original template remote unless I explicitly say I am contributing to the template, and add my own GitHub remote only if I provide one or ask you to create/publish it. Rename package.json and other repository-specific identifiers to the chosen project name where applicable. After first-run setup is complete, delete the marked Bootstrap-Only Instructions blocks from AGENTS.md and CLAUDE.md. Use Docker Compose for local PostgreSQL on Windows, macOS, and Linux; do not require native PostgreSQL or cloud credentials for local development.
-```
+All routes require a bearer access token from the auth flow and are scoped to the
+signed-in user.
 
-- First read `README.md`, `CLAUDE.md` if present, and relevant `docs/*.md`, then inspect package scripts and `.env.example` files before running setup commands.
-- Inspect `git remote -v` before any branch, commit, push, or PR workflow. If `origin` points to the template repository and the user has not explicitly said they are contributing to the template, treat this as a new project and detach from the template remote with `git remote remove origin`.
-- If the user provides their own GitHub repository URL or asks to publish the new project, add that URL as the new `origin` after the template remote is removed. If the user has not chosen a destination yet, leave the repository with no `origin` and report that publishing is not configured.
-- Do not open pull requests against the template repository during first-run project setup. Ask only if the user explicitly says this checkout is for improving the template itself.
-- Ask the user a short intake in the user's language before making product or deployment choices:
-  - what project name/slug to use;
-  - what product or app they want to build first;
-  - which surfaces are active now: webapp, mobile, backend/API, website, or full-stack;
-  - if mobile is active, whether the checkout is already on the `mobile` branch; if not, switch to `mobile` before setup;
-  - whether the first version needs accounts/auth, persistence, uploads/files/images/media, payments, admin tools, or external integrations;
-  - whether real-time chat, presence, collaboration, live notifications, or WebSocket-style updates are needed now;
-  - whether Expo/EAS builds and Maestro E2E validation are needed now when mobile is active;
-  - whether deployment is needed now, and if yes, the production domains/URLs and release targets.
-- After the user answers, record durable project choices in the relevant README sections before feature work: project name/slug, active surfaces, deferred surfaces, validation scope, and what deployment/release work is in or out of scope. Once setup is complete, remove the marked `Bootstrap-Only Instructions` blocks from `AGENTS.md` and `CLAUDE.md`.
-- If only the webapp is active, keep mobile deferred on the default branch: do not run Expo/EAS/Maestro setup and do not add mobile features. When the user later asks for mobile, switch to the `mobile` branch first.
-- If only the mobile app is active, keep webapp and website intact but deferred: do not add browser-only features or Playwright flows unless they support the active mobile/backend work, and add or update a short deferred-surface note in `webapp/README.md` or `website/README.md` as relevant. When the user later asks for webapp, remove or rewrite that note, then set up and validate webapp normally.
-- On the `mobile` branch, keep template-level Expo/EAS config universal. Do not commit an `expo.owner` or `extra.eas.projectId` to the template. In an installed project, write `expo.owner` and run EAS project init only after the user selects the real Expo personal account or organization that should own the app.
-- On the `mobile` branch, use an installed Expo development build for Maestro E2E, not Expo Go. Follow that branch's mobile README before running mobile flows.
-- Prefer README-level deferred-surface notes over source-code comments. Add code comments only when a dormant code path would otherwise mislead future work.
-- Default to local-only setup when the user does not need deployment yet. Local development must not require DigitalOcean credentials.
-- Use [docs/LOCAL_DATABASE.md](docs/LOCAL_DATABASE.md) and `docker-compose.yml` as the local PostgreSQL source of truth. The default local database path is Docker Compose, not a native PostgreSQL install.
-- If deployment is requested, use DigitalOcean App Platform as the supported production path. Use DigitalOcean Managed PostgreSQL for production databases; do not use App Platform dev databases for production.
-- For the default DigitalOcean production backend/API service, start with one `apps-s-1vcpu-1gb` App Platform container (`instance_count: 1`) plus the smallest DigitalOcean Managed PostgreSQL production cluster. This keeps the initial backend and database infrastructure around $27/month before taxes, traffic overages, storage, and optional add-ons. `webapp` and fully prerendered `website` output are Static Sites and do not need runtime container sizing. A `website` route with SSR/on-demand rendering or server islands needs a runtime service.
-- Deploy `webapp` and fully prerendered `website` output as DigitalOcean App Platform Static Sites, not App Platform services. They do not get `instance_size_slug` or `instance_count`; static site assets are served through DigitalOcean's global CDN by default. Use an external CDN only when the product needs advanced controls such as bot filtering, custom rate limiting, or geographic traffic rules.
-- For DigitalOcean app specs, use committed `.do/*.yaml.example` templates plus `bun run deploy:do:specs`; generated specs stay in `.scratch/deploy` and must fail on empty values or unresolved placeholders before `doctl apps create`. Concrete App Platform machine defaults live in `scripts/prepare-do-specs.mjs`; update that script and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) together when changing infrastructure tiers.
-- Before deployment or cloud-resource updates, verify `git remote -v` and `git status --short --branch`. Deploy only from the intended pushed release branch with a clean worktree; if local changes, untracked files, or branch sync issues are present, stop instead of cleaning, stashing, resetting, or checking out over another session's work.
-- Use DigitalOcean Spaces Standard Storage plus Spaces CDN for persistent files, uploads, and public media. Do not store uploads on the App Platform container filesystem.
-- If the user explicitly chooses Yandex Cloud, use [docs/YANDEX_CLOUD.md](docs/YANDEX_CLOUD.md): Serverless Containers for backend/API, Managed Service for PostgreSQL for production data, Object Storage for files/static sites, and Cloud CDN for public static/media delivery.
-- Explain manual prerequisites only for the active release path: DigitalOcean account, billing/project setup, `doctl auth init`, registry access when using DigitalOcean Container Registry, DigitalOcean Managed PostgreSQL, and production domains/DNS. Expo/EAS/App Store/Google Play setup lives on the `mobile` branch.
-- The agent may create uncommitted local `.env` files from `.env.example` and generate a local-only `JWT_SECRET`; never commit secrets or print raw secrets in the final report.
-- After setup, run the smallest meaningful validation for the chosen active surfaces and report local URLs, commands run, and anything the user still needs to authorize manually.
+| Method & path | Purpose |
+| --- | --- |
+| `POST /api/leads/lists` | Create a target list (`name`, `query`, optional `targetIndustry`, default `B2B SaaS`). |
+| `GET /api/leads/lists` | List the user's target lists with lead counts. |
+| `GET /api/leads/lists/{listId}` | Fetch one list. |
+| `POST /api/leads/lists/{listId}/leads` | Add 1–500 businesses to a list (manual entry or a bulk enrichment batch). |
+| `GET /api/leads/lists/{listId}/leads?status=` | List businesses in a list, optionally filtered by status. |
+| `POST /api/leads/leads/{leadId}/status` | Update a business's call/pipeline status. |
+
+Lead pipeline statuses: `NEW`, `QUEUED`, `CALLING`, `CALLED`, `INTERESTED`,
+`NOT_INTERESTED`, `CALLBACK`, `INVALID`, `DO_NOT_CALL`.
 
 ## What's Inside
 

@@ -1,20 +1,34 @@
 import {
+  addLeadsRequestSchema,
   apiErrorSchema,
   authResponseSchema,
+  createLeadListRequestSchema,
+  leadListResponseSchema,
+  leadListsResponseSchema,
+  leadResponseSchema,
+  leadsResponseSchema,
   loginRequestSchema,
   logoutRequestSchema,
   meResponseSchema,
   refreshRequestSchema,
   refreshResponseSchema,
   registerRequestSchema,
+  updateLeadStatusRequestSchema,
+  type AddLeadsRequest,
   type AuthResponse,
+  type CreateLeadListRequest,
+  type LeadListResponse,
+  type LeadListsResponse,
+  type LeadResponse,
+  type LeadsResponse,
+  type LeadStatus,
   type LoginRequest,
   type LogoutRequest,
   type MeResponse,
   type RefreshRequest,
   type RefreshResponse,
   type RegisterRequest,
-} from '@web-app-demo/contracts'
+} from '@coldpilot/contracts'
 import type { z } from 'zod'
 
 const apiBaseUrl = (import.meta.env?.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
@@ -82,6 +96,48 @@ export class ApiClient {
 
   me(): Promise<MeResponse> {
     return this.request('/api/auth/me', meResponseSchema, {
+      auth: true,
+    })
+  }
+
+  listLeadLists(): Promise<LeadListsResponse> {
+    return this.request('/api/leads/lists', leadListsResponseSchema, { auth: true })
+  }
+
+  createLeadList(input: CreateLeadListRequest): Promise<LeadListResponse> {
+    const payload = createLeadListRequestSchema.parse(input)
+    return this.request('/api/leads/lists', leadListResponseSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    })
+  }
+
+  getLeadList(listId: string): Promise<LeadListResponse> {
+    return this.request(`/api/leads/lists/${listId}`, leadListResponseSchema, { auth: true })
+  }
+
+  addLeads(listId: string, input: AddLeadsRequest): Promise<LeadsResponse> {
+    const payload = addLeadsRequestSchema.parse(input)
+    return this.request(`/api/leads/lists/${listId}/leads`, leadsResponseSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    })
+  }
+
+  listLeads(listId: string, status?: LeadStatus): Promise<LeadsResponse> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : ''
+    return this.request(`/api/leads/lists/${listId}/leads${query}`, leadsResponseSchema, {
+      auth: true,
+    })
+  }
+
+  updateLeadStatus(leadId: string, status: LeadStatus): Promise<LeadResponse> {
+    const payload = updateLeadStatusRequestSchema.parse({ status })
+    return this.request(`/api/leads/leads/${leadId}/status`, leadResponseSchema, {
+      method: 'POST',
+      body: payload,
       auth: true,
     })
   }

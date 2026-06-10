@@ -15,6 +15,9 @@ model User {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   sessions     AuthSession[]
+  leadLists    LeadList[]
+  leads        Lead[]
+  calls        Call[]
 
   @@map("users")
 }
@@ -34,4 +37,116 @@ model AuthSession {
   @@index([userId], map: "auth_sessions_user_id_idx")
   @@index([expiresAt], map: "auth_sessions_expires_at_idx")
   @@map("auth_sessions")
+}
+
+// A saved target segment the user wants to build a calling list for, e.g.
+// "B2B SaaS companies in the US, 11-50 employees". Leads are collected into it.
+model LeadList {
+  id             String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId         String         @db.Uuid @map("user_id")
+  name           String
+  query          String
+  targetIndustry String         @default("B2B SaaS") @map("target_industry")
+  status         LeadListStatus @default(DRAFT)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads          Lead[]
+
+  @@index([userId])
+  @@map("lead_lists")
+}
+
+// A single business with contact details, the core record we cold-call.
+model Lead {
+  id            String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  listId        String     @db.Uuid @map("list_id")
+  userId        String     @db.Uuid @map("user_id")
+  companyName   String     @map("company_name")
+  website       String?
+  industry      String?
+  phone         String?
+  email         String?
+  city          String?
+  country       String?
+  employeeCount Int?       @map("employee_count")
+  notes         String?
+  source        String     @default("manual")
+  status        LeadStatus @default(NEW)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  list          LeadList   @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calls         Call[]
+
+  @@index([listId])
+  @@index([userId])
+  @@index([status])
+  @@map("leads")
+}
+
+// One outbound AI call attempt against a lead. Populated by the calling
+// pipeline (telephony + GPT-4o + ElevenLabs) documented in docs/AI_CALLER.md.
+model Call {
+  id              String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  leadId          String      @db.Uuid @map("lead_id")
+  userId          String      @db.Uuid @map("user_id")
+  status          CallStatus  @default(QUEUED)
+  outcome         CallOutcome @default(NO_OUTCOME)
+  phoneNumber     String      @map("phone_number")
+  provider        String?
+  providerCallId  String?     @map("provider_call_id")
+  startedAt       DateTime?   @map("started_at")
+  endedAt         DateTime?   @map("ended_at")
+  durationSeconds Int?        @map("duration_seconds")
+  recordingUrl    String?     @map("recording_url")
+  transcript      String?
+  summary         String?
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  lead            Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([status])
+  @@map("calls")
+}
+
+enum LeadListStatus {
+  DRAFT
+  BUILDING
+  READY
+  ARCHIVED
+}
+
+enum LeadStatus {
+  NEW
+  QUEUED
+  CALLING
+  CALLED
+  INTERESTED
+  NOT_INTERESTED
+  CALLBACK
+  INVALID
+  DO_NOT_CALL
+}
+
+enum CallStatus {
+  QUEUED
+  DIALING
+  IN_PROGRESS
+  COMPLETED
+  NO_ANSWER
+  VOICEMAIL
+  FAILED
+}
+
+enum CallOutcome {
+  INTERESTED
+  NOT_INTERESTED
+  CALLBACK
+  NOT_A_FIT
+  WRONG_NUMBER
+  NO_OUTCOME
 }

@@ -6,12 +6,15 @@ import type { DbClient } from './db'
 import type { AppEnv } from './env'
 import { createAuthRoutes } from './auth/routes'
 import { AuthService } from './auth/service'
+import { createLeadRoutes } from './leads/routes'
+import { LeadsService } from './leads/service'
 import { errorResponse, handleError, validationErrorHook } from './http/errors'
 import { createStorageServiceFromEnv, type StorageService } from './storage/service'
 
 type AppBindings = {
   Variables: {
     authService: AuthService
+    leadsService: LeadsService
     env: AppEnv
     storageService: StorageService | null
   }
@@ -24,6 +27,7 @@ type CreateAppOptions = {
 
 export function createApp({ env, prisma }: CreateAppOptions) {
   const authService = new AuthService(prisma, env)
+  const leadsService = new LeadsService(prisma)
   const storageService = createStorageServiceFromEnv(env)
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: validationErrorHook,
@@ -45,6 +49,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   )
   app.use('*', async (c, next) => {
     c.set('authService', authService)
+    c.set('leadsService', leadsService)
     c.set('env', env)
     c.set('storageService', storageService)
     await next()
@@ -52,7 +57,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
 
   app.get('/', (c) => {
     return c.json({
-      name: 'web_app_demo backend',
+      name: 'ColdPilot API',
       status: 'ok',
     })
   })
@@ -64,11 +69,12 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   })
 
   app.route('/api/auth', createAuthRoutes())
+  app.route('/api/leads', createLeadRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',
     info: {
-      title: 'web_app_demo API',
+      title: 'ColdPilot API',
       version: '1.0.0',
     },
   })
